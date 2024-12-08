@@ -1,0 +1,18 @@
+environment:
+  num_nodes: 20
+  false_positive_rate: 0.05
+  compromise_detection_rate: 0.8
+
+training:
+  batch_size: 32
+  learning_rate: 0.001
+  episodes: 1000
+  evaluation_interval: 100
+
+attack_probabilities:
+  ransomware: 0.2
+  apt: 0.3
+  ddos: 0.2
+  zeroday: 0.1
+  llm_driven: 0.2
+  llm_attack_prob: 0.2

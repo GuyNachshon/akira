@@ -1,0 +1,67 @@
+# Training Configuration
+
+# Environment settings
+environment:
+    num_nodes: 20
+    initial_vulnerability_range: [ 1, 10 ]
+    false_positive_rate: 0.05
+    compromise_detection_rate: 0.8
+
+# Training phases
+phases:
+    -   name: "Static Attacks"
+        episodes: 1000
+        attack_types: [ "ransomware", "apt", "ddos", "zeroday" ]
+        llm_attack_prob: 0.0
+        enable_collaboration: false
+        evaluation_interval: 100
+        
+
+    -   name: "LLM Attacks"
+        episodes: 1000
+        attack_types: [ "ransomware", "apt", "ddos", "zeroday", "llm_driven" ]
+        llm_attack_prob: 0.2
+        enable_collaboration: false
+        evaluation_interval: 100
+
+    -   name: "Collaborative Defense"
+        episodes: 1000
+        attack_types: [ "ransomware", "apt", "ddos", "zeroday", "llm_driven" ]
+        llm_attack_prob: 0.3
+        enable_collaboration: true
+        evaluation_interval: 50
+
+# Agent configuration
+agent:
+    learning_rate: 0.001
+    batch_size: 32
+    hidden_dim: 128
+    buffer_size: 10000
+    update_interval: 10
+
+# Training parameters
+training:
+    gamma: 0.99  # Discount factor
+    tau: 0.005   # Soft update coefficient
+    epsilon_start: 1.0
+    epsilon_end: 0.01
+    epsilon_decay: 0.995
+
+# Reward configuration
+rewards:
+    detection_success: 1.0
+    false_positive: -0.5
+    resource_usage: -0.1
+    network_health: 2.0
+    collaboration_bonus: 0.3
+
+# Visualization settings
+visualization:
+    update_interval: 10
+    save_plots: true
+    plot_dir: "training_plots"
+    metrics_to_plot:
+        - network_health
+        - compromised_nodes
+        - agent_rewards
+        - attack_success_rate
