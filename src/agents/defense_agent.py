@@ -35,7 +35,10 @@ class DefenseAgent:
             strategy, action_probs = self.policy(observation_tensor)
 
             # Sample action from probability distribution
-            action = torch.multinomial(action_probs[0], 1).item()
+            if torch.isnan(action_probs[0]).any() or action_probs[0].sum() <= 0:
+                action = np.random.randint(0, action_probs.size(1))
+            else:
+                action = torch.multinomial(action_probs[0], 1).item()
 
         return action, {
             'strategy': strategy,
