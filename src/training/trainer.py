@@ -8,6 +8,7 @@ from src.agents.experience_buffer import ExperienceBuffer
 from src.environment.network_env import NetworkEnvironment
 import torch
 
+from src.environment.state import NodeState
 from src.training.model_manager import ModelManager
 from src.visualization.training_visualizer import TrainingVisualizer
 
@@ -125,13 +126,19 @@ class TrainingManager:
                 # Execute actions in environment
                 next_observations, rewards, dones, infos = self.env.step(actions)
 
-                # Store experiences
+                # Store experiences with proper tensor conversion
                 for agent_id in self.agents.keys():
+                    # Convert states and rewards to tensors
+                    curr_obs = torch.FloatTensor(observations[agent_id])
+                    next_obs = torch.FloatTensor(next_observations[agent_id])
+                    reward = torch.FloatTensor([rewards[agent_id]])
+                    action = torch.LongTensor([actions[agent_id]])
+
                     self.experience_buffers[agent_id].add(
-                        observations[agent_id],
-                        actions[agent_id],
-                        rewards[agent_id],
-                        next_observations[agent_id]
+                        curr_obs,
+                        action,
+                        reward,
+                        next_obs
                     )
                     episode_reward += rewards[agent_id]
 
@@ -143,16 +150,11 @@ class TrainingManager:
                 if len(self.experience_buffers[agent_id].states) >= self.batch_size:
                     self._update_agents(phase.get('enable_collaboration', False))
 
-            # Record metrics
+            # Record metrics (rest of the code remains the same)
             phase_metrics['episode_rewards'].append(episode_reward)
-            phase_metrics['network_health'].append(
-                self.env._calculate_network_health()
-            )
-            phase_metrics['compromised_nodes'].append(
-                self.env._count_compromised_nodes()
-            )
+            phase_metrics['network_health'].append(self.env.calculate_network_health())
+            phase_metrics['compromised_nodes'].append(self.env._count_compromised_nodes())
 
-            # Calculate attack success rate
             attack_success = sum(
                 1 for node in self.env.graph.nodes()
                 if self.env.graph.nodes[node]['data'].state == NodeState.COMPROMISED
