@@ -17,12 +17,12 @@ phases:
         evaluation_interval: 100
         
 
-    -   name: "LLM Attacks"
-        episodes: 1000
-        attack_types: [ "ransomware", "apt", "ddos", "zeroday", "llm_driven" ]
-        llm_attack_prob: 0.2
-        enable_collaboration: false
-        evaluation_interval: 100
+#    -   name: "LLM Attacks"
+#        episodes: 1000
+#        attack_types: [ "ransomware", "apt", "ddos", "zeroday", "llm_driven" ]
+#        llm_attack_prob: 0.2
+#        enable_collaboration: false
+#        evaluation_interval: 100
 
     -   name: "Collaborative Defense"
         episodes: 1000
