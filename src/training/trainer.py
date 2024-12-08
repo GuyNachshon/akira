@@ -8,6 +8,7 @@ from src.agents.experience_buffer import ExperienceBuffer
 from src.environment.network_env import NetworkEnvironment
 import torch
 
+from src.training.model_manager import ModelManager
 from src.visualization.training_visualizer import TrainingVisualizer
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,14 @@ class TrainingManager:
 
         # Get training phases from config if not specified
         self.training_phases = training_phases or self.config['phases']
+
+        self.model_manager = ModelManager()
+        self.training_metrics = {
+            'episode_rewards': [],
+            'network_health': [],
+            'compromised_nodes': [],
+            'phase_performance': {}
+        }
 
         # Initialize agents
         self.agents = {
@@ -97,6 +106,11 @@ class TrainingManager:
             # Configure environment for this phase
             self.env.config['attack_probabilities']['llm_driven'] = phase['llm_attack_prob']
 
+            phase_metrics = self._train_phase(phase)
+
+            # Save phase metrics
+            self.training_metrics['phase_performance'][phase['name']] = phase_metrics
+
             for episode in tqdm(range(phase['episodes']), desc=phase['name'], unit='episodes', position=1, leave=True, total=phase['episodes']):
                 self._train_episode(
                     enable_collaboration=phase.get('enable_collaboration', False)
@@ -104,6 +118,23 @@ class TrainingManager:
 
                 if episode % 100 == 0:
                     self._evaluate()
+
+            self.training_metrics['phase_performance'][phase['name']] = phase_metrics
+
+            self.model_manager.save_model(
+                agents=self.agents,
+                config=self.config,
+                metrics=self.training_metrics,
+                phase=phase['name']
+            )
+
+        final_save_dir = self.model_manager.save_model(
+            agents=self.agents,
+            config=self.config,
+            metrics=self.training_metrics,
+            phase="final"
+        )
+        logger.info(f"Training completed. Final model saved to {final_save_dir}")
 
     def _train_episode(self, enable_collaboration: bool = False):
         """Train for one episode."""

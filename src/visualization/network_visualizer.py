@@ -196,14 +196,3 @@ class NetworkVisualizer:
                 f"Vulnerability: {node.vulnerability}<br>"
                 f"Value: {node.value}")
 
-    @staticmethod
-    def _get_node_color(state: NodeState) -> str:
-        """Get color for node based on its state."""
-        colors = {
-            NodeState.SAFE: '#00ff00',  # Green
-            NodeState.COMPROMISED: '#ff0000',  # Red
-            NodeState.OVERLOADED: '#ffa500',  # Orange
-            NodeState.ISOLATED: '#808080',  # Gray
-            NodeState.SCANNING: '#0000ff'  # Blue
-        }
-        return colors.get(state, '#000000')
