@@ -97,6 +97,92 @@ class TrainingManager:
             ]
         }
 
+    def _train_phase(self, phase: Dict) -> Dict:
+        """Execute a single training phase."""
+        logger.info(f"Attack Phase: {phase}")
+
+        phase_metrics = {
+            'episode_rewards': [],
+            'network_health': [],
+            'compromised_nodes': [],
+            'attack_success_rate': []
+        }
+
+        for episode in range(phase['episodes']):
+            # Reset environment
+            observations = self.env.reset()
+            episode_reward = 0
+            done = False
+
+            while not done:
+                # Collect actions from all agents
+                actions = {}
+                for agent_id, agent in self.agents.items():
+                    obs = observations[agent_id]
+                    action, _ = agent.act(obs)
+                    actions[agent_id] = action
+
+                # Execute actions in environment
+                next_observations, rewards, dones, infos = self.env.step(actions)
+
+                # Store experiences
+                for agent_id in self.agents.keys():
+                    self.experience_buffers[agent_id].add(
+                        observations[agent_id],
+                        actions[agent_id],
+                        rewards[agent_id],
+                        next_observations[agent_id]
+                    )
+                    episode_reward += rewards[agent_id]
+
+                # Update observations
+                observations = next_observations
+                done = dones["__all__"]
+
+                # Training step if enough samples
+                if len(self.experience_buffers[agent_id].states) >= self.batch_size:
+                    self._update_agents(phase.get('enable_collaboration', False))
+
+            # Record metrics
+            phase_metrics['episode_rewards'].append(episode_reward)
+            phase_metrics['network_health'].append(
+                self.env._calculate_network_health()
+            )
+            phase_metrics['compromised_nodes'].append(
+                self.env._count_compromised_nodes()
+            )
+
+            # Calculate attack success rate
+            attack_success = sum(
+                1 for node in self.env.graph.nodes()
+                if self.env.graph.nodes[node]['data'].state == NodeState.COMPROMISED
+            ) / self.env.num_nodes
+            phase_metrics['attack_success_rate'].append(attack_success)
+
+            # Log progress
+            if episode % 10 == 0:
+                logger.info(
+                    f"Episode {episode}/{phase['episodes']} - "
+                    f"Reward: {episode_reward:.2f}, "
+                    f"Network Health: {phase_metrics['network_health'][-1]:.2f}, "
+                    f"Compromised Nodes: {phase_metrics['compromised_nodes'][-1]}"
+                )
+
+            # Evaluation
+            if episode % phase.get('evaluation_interval', 100) == 0:
+                self._evaluate()
+
+            # Update visualizer if available
+            if self.visualizer:
+                self.visualizer.update_metrics(
+                    network_health=phase_metrics['network_health'][-1],
+                    compromised_nodes=phase_metrics['compromised_nodes'][-1],
+                    agent_rewards={agent_id: rewards[agent_id] for agent_id in self.agents.keys()},
+                    attack_success=attack_success
+                )
+
+        return phase_metrics
+
     def train(self):
         """Execute full training pipeline."""
         for phase in tqdm(self.training_phases, desc='Training Phases', unit='phases', position=0, leave=True, total=len(self.training_phases)):
